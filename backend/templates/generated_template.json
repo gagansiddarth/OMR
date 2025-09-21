@@ -1,0 +1,39 @@
+{
+  "pageDimensions": [
+    666,
+    820
+  ],
+  "bubbleDimensions": [
+    20,
+    20
+  ],
+  "emptyValue": "",
+  "fieldBlocks": {
+    "Math": {
+      "fieldType": "QTYPE_MCQ4",
+      "origin": [
+        50,
+        100
+      ],
+      "bubblesGap": 50,
+      "labelsGap": 60,
+      "fieldLabels": [
+        "q1",
+        "q2",
+        "q3",
+        "q4"
+      ]
+    }
+  },
+  "preProcessors": [
+    {
+      "name": "CropPage",
+      "options": {
+        "morphKernel": [
+          10,
+          10
+        ]
+      }
+    }
+  ]
+}
