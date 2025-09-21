@@ -6,12 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { toast } from '@/hooks/use-toast';
-import SupabaseTest from '@/components/features/SupabaseTest';
-import EnvTest from '@/components/features/EnvTest';
-import { EnvironmentSetup } from '@/components/features/EnvironmentSetup';
-import { SupabaseConnectionTest } from '@/components/features/SupabaseConnectionTest';
-import { UploadTest } from '@/components/features/UploadTest';
-import BackendTest from '@/components/features/BackendTest';
 import { EvaluationMode, TestDetails } from '@/types';
 
 interface UploadPageProps {
@@ -21,11 +15,7 @@ interface UploadPageProps {
 }
 
 const UploadPage: React.FC<UploadPageProps> = ({ onFileUpload, uploads, currentTest }) => {
-  const [showSupabaseTest, setShowSupabaseTest] = useState(false);
   const [evaluationMode, setEvaluationMode] = useState<EvaluationMode>('moderate');
-  const [isTestingUpload, setIsTestingUpload] = useState(false);
-  const [uploadTestResult, setUploadTestResult] = useState<'success' | 'error' | undefined>();
-  const [uploadTestMessage, setUploadTestMessage] = useState<string>('');
 
   const handleFileUpload = async (files: FileList) => {
     console.log('UploadPage: handleFileUpload called with files:', files.length, 'currentTest:', currentTest?.testName);
@@ -36,39 +26,6 @@ const UploadPage: React.FC<UploadPageProps> = ({ onFileUpload, uploads, currentT
     }
   };
 
-  const handleTestUpload = async () => {
-    setIsTestingUpload(true);
-    setUploadTestResult(undefined);
-    setUploadTestMessage('');
-
-    try {
-      // Create a mock file for testing
-      const mockFile = new File(['test content'], 'test-omr.png', { type: 'image/png' });
-      const mockFileList = {
-        0: mockFile,
-        length: 1,
-        item: (index: number) => index === 0 ? mockFile : null,
-        [Symbol.iterator]: function* () {
-          yield mockFile;
-        }
-      } as FileList;
-
-      await onFileUpload(mockFileList, evaluationMode);
-      
-      // Wait a bit to see if processing completes
-      setTimeout(() => {
-        setUploadTestResult('success');
-        setUploadTestMessage('Upload flow test completed successfully');
-        setIsTestingUpload(false);
-      }, 3000);
-      
-    } catch (error) {
-      console.error('Upload test failed:', error);
-      setUploadTestResult('error');
-      setUploadTestMessage(error instanceof Error ? error.message : 'Unknown error');
-      setIsTestingUpload(false);
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -77,27 +34,17 @@ const UploadPage: React.FC<UploadPageProps> = ({ onFileUpload, uploads, currentT
           <h2 className="text-2xl font-bold mb-2">Upload OMR Sheets</h2>
           <p className="text-muted-foreground">Upload single images or ZIP files containing multiple sheets</p>
         </div>
-        <div className="flex gap-2">
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-medium">Evaluation Mode:</label>
-            <select 
-              value={evaluationMode} 
-              onChange={(e) => setEvaluationMode(e.target.value as EvaluationMode)}
-              className="px-3 py-1 border rounded-md text-sm"
-            >
-              <option value="easy">Easy</option>
-              <option value="moderate">Moderate</option>
-              <option value="strict">Strict</option>
-            </select>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowSupabaseTest(!showSupabaseTest)}
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium">Evaluation Mode:</label>
+          <select 
+            value={evaluationMode} 
+            onChange={(e) => setEvaluationMode(e.target.value as EvaluationMode)}
+            className="px-3 py-1 border rounded-md text-sm"
           >
-            <Database className="h-4 w-4 mr-1" />
-            Test Database
-          </Button>
+            <option value="easy">Easy</option>
+            <option value="moderate">Moderate</option>
+            <option value="strict">Strict</option>
+          </select>
         </div>
       </div>
 
@@ -145,36 +92,7 @@ const UploadPage: React.FC<UploadPageProps> = ({ onFileUpload, uploads, currentT
         </Card>
       )}
 
-      {/* Supabase Test Component */}
-      {showSupabaseTest && (
-        <div className="space-y-4">
-          <EnvTest />
-          <SupabaseTest />
-        </div>
-      )}
 
-      {/* Environment Setup */}
-      {(!import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL === 'https://your-project.supabase.co' || import.meta.env.VITE_SUPABASE_URL.includes('your-project')) && (
-        <EnvironmentSetup />
-      )}
-
-      {/* Supabase Connection Test */}
-      {import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('your-project') && (
-        <SupabaseConnectionTest />
-      )}
-
-            {/* Backend API Test */}
-            <BackendTest />
-
-            {/* Upload Flow Test */}
-            {currentTest && (
-              <UploadTest 
-                onTestUpload={handleTestUpload}
-                isTesting={isTestingUpload}
-                testResult={uploadTestResult}
-                testMessage={uploadTestMessage}
-              />
-            )}
 
       <div className="grid md:grid-cols-2 gap-6">
         <Card>

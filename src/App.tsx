@@ -33,13 +33,10 @@ import { BookOpen, Target } from 'lucide-react';
 const queryClient = new QueryClient();
 
 const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<TabId>('create-test');
+  const [activeTab, setActiveTab] = useState<TabId>('upload');
   const [uploads, setUploads] = useState<ProcessingItem[]>([]);
   const [results, setResults] = useState<OMRResult[]>([]);
   const [selectedResult, setSelectedResult] = useState<OMRResult | null>(null);
-  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
-  const [showSettings, setShowSettings] = useState(false);
-  const [showDemo, setShowDemo] = useState(false);
   const [currentTest, setCurrentTest] = useState<TestDetails | null>(null);
   const [showStudentDialog, setShowStudentDialog] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
@@ -526,92 +523,12 @@ const App: React.FC = () => {
       <Toaster />
       <Sonner />
         <div className="min-h-screen bg-background">
-                {/* Demo Script Modal */}
-                <Dialog open={showDemo} onOpenChange={setShowDemo}>
-                  <DialogContent className="max-w-2xl">
-                    <DialogHeader>
-                      <DialogTitle className="flex items-center gap-2">
-                        <BookOpen className="h-5 w-5" />
-                        Demo Script for Judges
-                      </DialogTitle>
-                      <DialogDescription>
-                        Follow these steps to showcase the OMR system capabilities
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      {DEMO_SCRIPT_STEPS.map((step, idx) => (
-                        <div key={idx} className="p-4 bg-muted rounded-lg">
-                          <h4 className="font-semibold mb-2">{step.title}</h4>
-                          <p className="text-sm text-muted-foreground">{step.description}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </DialogContent>
-                </Dialog>
-
-                {/* Settings Panel */}
-                <Dialog open={showSettings} onOpenChange={setShowSettings}>
-                  <DialogContent className="max-w-md">
-                    <DialogHeader>
-                      <DialogTitle>System Configuration</DialogTitle>
-                      <DialogDescription>Adjust OMR processing thresholds and settings</DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div>
-                        <Label htmlFor="th-low">Low Confidence Threshold</Label>
-                        <Input 
-                          id="th-low"
-                          type="number" 
-                          step="0.1" 
-                          min="0" 
-                          max="1"
-                          value={settings.TH_LOW}
-                          onChange={(e) => setSettings(prev => ({ ...prev, TH_LOW: parseFloat(e.target.value) }))}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="th-high">High Confidence Threshold</Label>
-                        <Input 
-                          id="th-high"
-                          type="number" 
-                          step="0.1" 
-                          min="0" 
-                          max="1"
-                          value={settings.TH_HIGH}
-                          onChange={(e) => setSettings(prev => ({ ...prev, TH_HIGH: parseFloat(e.target.value) }))}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="flag-rate">Flag Rate Target</Label>
-                        <Input 
-                          id="flag-rate"
-                          type="number" 
-                          step="0.01" 
-                          min="0" 
-                          max="1"
-                          value={settings.flag_rate_target}
-                          onChange={(e) => setSettings(prev => ({ ...prev, flag_rate_target: parseFloat(e.target.value) }))}
-                        />
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Switch 
-                          id="mock-llm"
-                          checked={settings.use_mock_llm}
-                          onCheckedChange={(checked) => setSettings(prev => ({ ...prev, use_mock_llm: checked }))}
-                        />
-                        <Label htmlFor="mock-llm">Use Mock LLM (Demo)</Label>
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
 
                 {/* Main Interface */}
                 <div className="flex h-screen">
                   <Sidebar
                     activeTab={activeTab}
                     onTabChange={setActiveTab}
-                    onShowDemo={() => setShowDemo(true)}
-                    onShowSettings={() => setShowSettings(true)}
                   />
 
                   {/* Main Content */}

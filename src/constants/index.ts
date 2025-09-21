@@ -1,10 +1,7 @@
 // Navigation Items
 export const NAVIGATION_ITEMS = [
-  { id: 'create-test', label: 'Create Test', icon: 'Plus' },
-  { id: 'upload', label: 'Upload Sheets', icon: 'Upload' },
-  { id: 'processing', label: 'Processing Queue', icon: 'Clock' },
-  { id: 'results', label: 'Results Dashboard', icon: 'BarChart3' },
-  { id: 'reports', label: 'Get Reports', icon: 'FileText' },
+  { id: 'upload', label: 'Upload OMR Sheets', icon: 'Upload' },
+  { id: 'results', label: 'View Results', icon: 'BarChart3' },
 ] as const;
 
 // Default Settings
