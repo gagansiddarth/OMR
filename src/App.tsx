@@ -630,6 +630,14 @@ const App: React.FC = () => {
                 onConfirm={handleStudentIdentified}
                 filename={pendingFile?.name || ''}
               />
+
+              {/* Custom Footer */}
+              <footer className="fixed bottom-0 left-0 right-0 bg-background border-t p-2 text-center text-sm text-muted-foreground z-50">
+                <div className="flex items-center justify-center gap-2">
+                  <Target className="h-4 w-4" />
+                  <span>OMR Vision System - Advanced OMR Evaluation Platform</span>
+                </div>
+              </footer>
     </TooltipProvider>
   </QueryClientProvider>
 );
