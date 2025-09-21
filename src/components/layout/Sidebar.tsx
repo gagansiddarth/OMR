@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { NAVIGATION_ITEMS } from '@/constants';
 import { TabId } from '@/types';
+import UserProfile from '@/components/auth/UserProfile';
 
 interface SidebarProps {
   activeTab: TabId;
@@ -35,13 +36,16 @@ const Sidebar: React.FC<SidebarProps> = ({
             <Target className="h-6 w-6 text-primary" />
             <h1 className="text-xl font-bold">OMR System</h1>
           </div>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={onShowSettings}
-          >
-            <Settings className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={onShowSettings}
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
+            <UserProfile />
+          </div>
         </div>
 
         <nav className="space-y-2">

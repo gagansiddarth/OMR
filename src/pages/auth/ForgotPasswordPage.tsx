@@ -1,23 +1,21 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Eye, EyeOff, Target } from 'lucide-react';
+import { Loader2, Target, CheckCircle, ArrowLeft } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
-const LoginPage: React.FC = () => {
+const ForgotPasswordPage: React.FC = () => {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
-  const { signIn } = useAuth();
-  const navigate = useNavigate();
+  const { resetPassword } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,26 +23,26 @@ const LoginPage: React.FC = () => {
     setError(null);
 
     try {
-      const { error } = await signIn(email, password);
+      const { error } = await resetPassword(email);
       
       if (error) {
         setError(error.message);
         toast({
-          title: "Login Failed",
+          title: "Reset Failed",
           description: error.message,
           variant: "destructive",
         });
       } else {
+        setSuccess(true);
         toast({
-          title: "Login Successful",
-          description: "Welcome back!",
+          title: "Reset Email Sent",
+          description: "Please check your email for reset instructions",
         });
-        navigate('/');
       }
     } catch (err) {
       setError('An unexpected error occurred');
       toast({
-        title: "Login Failed",
+        title: "Reset Failed",
         description: "An unexpected error occurred",
         variant: "destructive",
       });
@@ -52,6 +50,44 @@ const LoginPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  if (success) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+        <div className="w-full max-w-md">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                <h2 className="text-2xl font-bold mb-2">Check Your Email</h2>
+                <p className="text-muted-foreground mb-4">
+                  We've sent password reset instructions to <strong>{email}</strong>
+                </p>
+                <p className="text-sm text-muted-foreground mb-6">
+                  Didn't receive the email? Check your spam folder or try again.
+                </p>
+                <div className="space-y-2">
+                  <Button 
+                    onClick={() => setSuccess(false)} 
+                    variant="outline" 
+                    className="w-full"
+                  >
+                    Try Again
+                  </Button>
+                  <Button asChild variant="ghost" className="w-full">
+                    <Link to="/login">
+                      <ArrowLeft className="mr-2 h-4 w-4" />
+                      Back to Login
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
@@ -67,9 +103,9 @@ const LoginPage: React.FC = () => {
 
         <Card>
           <CardHeader className="text-center">
-            <CardTitle>Welcome Back</CardTitle>
+            <CardTitle>Forgot Password</CardTitle>
             <CardDescription>
-              Sign in to your account to continue
+              Enter your email address and we'll send you reset instructions
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -93,61 +129,24 @@ const LoginPage: React.FC = () => {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    disabled={loading}
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                    onClick={() => setShowPassword(!showPassword)}
-                    disabled={loading}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-
               <Button
                 type="submit"
                 className="w-full"
                 disabled={loading}
               >
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Sign In
+                Send Reset Instructions
               </Button>
             </form>
 
             <div className="mt-6 text-center text-sm">
               <p className="text-muted-foreground">
-                Don't have an account?{' '}
+                Remember your password?{' '}
                 <Link
-                  to="/register"
+                  to="/login"
                   className="text-primary hover:underline font-medium"
                 >
-                  Sign up
-                </Link>
-              </p>
-              <p className="mt-2">
-                <Link
-                  to="/forgot-password"
-                  className="text-primary hover:underline font-medium"
-                >
-                  Forgot your password?
+                  Sign in
                 </Link>
               </p>
             </div>
@@ -158,4 +157,4 @@ const LoginPage: React.FC = () => {
   );
 };
 
-export default LoginPage;
+export default ForgotPasswordPage;

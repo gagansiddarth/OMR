@@ -1,9 +1,12 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { toast } from '@/hooks/use-toast';
+import { AuthProvider } from '@/contexts/AuthContext';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 // Components
 import Sidebar from '@/components/layout/Sidebar';
@@ -13,6 +16,11 @@ import ProcessingPage from '@/pages/dashboard/ProcessingPage';
 import ResultsPage from '@/pages/results/ResultsPage';
 import ReportsPage from '@/pages/reports/ReportsPage';
 import StudentIdentificationDialog from '@/components/features/StudentIdentificationDialog';
+
+// Auth Pages
+import LoginPage from '@/pages/auth/LoginPage';
+import RegisterPage from '@/pages/auth/RegisterPage';
+import ForgotPasswordPage from '@/pages/auth/ForgotPasswordPage';
 
 // Services and Types
 import { mockAPI } from '@/services/api';
@@ -44,459 +52,181 @@ const App: React.FC = () => {
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [evaluationMode, setEvaluationMode] = useState<EvaluationMode>('moderate');
 
-      // Initialize with data from Supabase or localStorage
-      useEffect(() => {
-        const initializeApp = async () => {
-          try {
-            // Check if Supabase is properly configured
-            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-            const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-            
-            if (!supabaseUrl || !supabaseKey || supabaseUrl === 'https://your-project.supabase.co' || supabaseKey === 'your-anon-key' || supabaseUrl.includes('your-project') || supabaseKey.includes('your-anon')) {
-              // Fallback: Load from localStorage
-              console.warn('Supabase not configured, loading from localStorage');
-              const savedTest = localStorage.getItem('currentTest');
-              if (savedTest) {
-                const test = JSON.parse(savedTest);
-                setCurrentTest(test);
-                console.log('Loaded test from localStorage:', test);
-              }
-              return;
-            }
-
-            // Load tests from Supabase
-            const tests = await supabaseService.getTests();
-            console.log('Loaded tests from Supabase:', tests);
-            
-            if (tests.length > 0) {
-              // Convert Supabase format to frontend format
-              const test = tests[0];
-              const frontendTest: TestDetails = {
-                id: test.id,
-                test_name: test.test_name,
-                description: test.description,
-                total_questions: test.total_questions,
-                subjects: test.subjects?.map((subject: any) => ({
-                  id: subject.id,
-                  name: subject.name,
-                  questions: subject.questions,
-                  answer_key: subject.answer_key
-                })) || []
-              };
-              setCurrentTest(frontendTest);
-              console.log('Set current test:', frontendTest);
-            } else {
-              console.log('No tests found in Supabase');
-            }
-            
-            // Load evaluations as results
-            const evaluations = await supabaseService.getAllEvaluations();
-            console.log('Loaded evaluations from Supabase:', evaluations);
-            
-            // Convert evaluations to OMR results format
-            const results = evaluations.map((evaluation: Evaluation) => ({
-              upload_id: evaluation.id || '',
-              student_id: evaluation.student_id,
-              filename: `evaluation_${evaluation.id}`,
-              answers: evaluation.per_question || [],
-              scores: evaluation.per_subject_scores || {},
-              flagged_questions: evaluation.flags?.ambiguous_questions || [],
-              confidence_score: evaluation.confidence_score,
-              processing_time: evaluation.processing_time,
-              evaluation_mode: 'moderate' as EvaluationMode,
-              created_at: evaluation.created_at || new Date().toISOString()
-            }));
-            
-            setResults(results);
-            console.log('Set results:', results);
-            
-          } catch (error) {
-            console.error('Error initializing app:', error);
-            
-            // Fallback to localStorage on error
-            console.warn('Falling back to localStorage due to error:', error);
-            const savedTest = localStorage.getItem('currentTest');
-            if (savedTest) {
-              const test = JSON.parse(savedTest);
-              setCurrentTest(test);
-              console.log('Loaded test from localStorage fallback:', test);
-            }
-            
-            toast({
-              title: "Database Error",
-              description: "Using local storage fallback. Check Supabase configuration.",
-              variant: "destructive"
-            });
-          }
-        };
-
-        initializeApp();
-      }, []);
-
-  // File Upload Handler
-  const handleFileUpload = useCallback(async (files: FileList, mode: EvaluationMode = 'moderate') => {
-    if (!currentTest) {
-      toast({ 
-        title: "No Test Selected", 
-        description: "Please create a test first before uploading OMR sheets", 
-        variant: "destructive" 
-      });
-      return;
-    }
-
-    // Handle single file upload with student identification
-    const file = files[0];
-    if (!file) {
-      return;
-    }
-
-    console.log('Setting pending file and showing student dialog:', file.name);
-    setPendingFile(file);
-    setShowStudentDialog(true);
-  }, [currentTest]);
-
-  // Test Management Handlers
-  const handleTestCreated = useCallback(async (testDetails: TestDetails) => {
-    try {
-      // Check if Supabase is properly configured
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      
-      if (!supabaseUrl || !supabaseKey || supabaseUrl === 'https://your-project.supabase.co' || supabaseKey === 'your-anon-key' || supabaseUrl.includes('your-project') || supabaseKey.includes('your-anon')) {
-        // Fallback: Use local storage if Supabase is not configured
-        console.warn('Supabase not configured, using local storage fallback');
-        const testId = `local_${Date.now()}`;
-        const testWithId = { ...testDetails, id: testId };
-        
-        // Save to localStorage as fallback
-        localStorage.setItem('currentTest', JSON.stringify(testWithId));
-        localStorage.setItem('testSubjects', JSON.stringify(testDetails.subjects || []));
-        
-        setCurrentTest(testWithId);
-        setActiveTab('upload');
-        toast({ 
-        title: "Test Created (Local Storage)", 
-        description: `Test "${testDetails.test_name}" saved locally. To use Supabase, create .env.local file with your credentials.`
-        });
-        return;
-      }
-
-      // Save test to Supabase
-      const testData = {
-        test_name: testDetails.test_name,
-        description: testDetails.description,
-        total_questions: testDetails.total_questions
-      };
-      
-      const savedTest = await supabaseService.createTest(testData);
-      console.log('Test saved to Supabase:', savedTest);
-      
-      // Save subjects to Supabase
-      if (testDetails.subjects && savedTest.id) {
-        for (const subject of testDetails.subjects) {
-          await supabaseService.createSubject({
-            test_id: savedTest.id,
-            name: subject.name,
-            questions: subject.questions,
-            answer_key: subject.answer_key
-          });
+  // Initialize with data from Supabase or localStorage
+  useEffect(() => {
+    const initializeApp = async () => {
+      try {
+        // Load test details from localStorage
+        const savedTest = localStorage.getItem('currentTest');
+        if (savedTest) {
+          setCurrentTest(JSON.parse(savedTest));
         }
+
+        // Load results from localStorage
+        const savedResults = localStorage.getItem('omrResults');
+        if (savedResults) {
+          setResults(JSON.parse(savedResults));
+        }
+
+        // Load uploads from localStorage
+        const savedUploads = localStorage.getItem('omrUploads');
+        if (savedUploads) {
+          setUploads(JSON.parse(savedUploads));
+        }
+      } catch (error) {
+        console.error('Failed to initialize app:', error);
       }
-      
-      // Update testDetails with the saved ID
-      const updatedTestDetails = {
-        ...testDetails,
-        id: savedTest.id
-      };
-      
-      setCurrentTest(updatedTestDetails);
-      setActiveTab('upload');
-      toast({ title: "Test Created", description: `Test "${testDetails.test_name}" has been saved and is ready for evaluation` });
-    } catch (error) {
-      console.error('Error creating test:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      
-      // Fallback to local storage on error
-      console.warn('Falling back to local storage due to error:', errorMessage);
-      const testId = `local_${Date.now()}`;
-      const testWithId = { ...testDetails, id: testId };
-      
-      localStorage.setItem('currentTest', JSON.stringify(testWithId));
-      localStorage.setItem('testSubjects', JSON.stringify(testDetails.subjects || []));
-      
-      setCurrentTest(testWithId);
-      setActiveTab('upload');
-      toast({ 
-        title: "Test Created (Local Storage)", 
-        description: `Test "${testDetails.test_name}" saved locally. Database error: ${errorMessage}` 
-      });
-    }
-  }, []);
-
-  const handleStartEvaluating = useCallback((testDetails: TestDetails) => {
-    setCurrentTest(testDetails);
-    setActiveTab('upload');
-    toast({ title: "Ready to Evaluate", description: `Test "${testDetails.test_name}" is ready for evaluation` });
-  }, []);
-
-  const handleStudentIdentified = useCallback(async (studentName: string, studentId: string) => {
-    console.log('Student identified:', { studentName, studentId, pendingFile: pendingFile?.name, currentTest: currentTest?.test_name });
-    
-    if (!pendingFile || !currentTest) {
-      console.error('Missing pendingFile or currentTest:', { pendingFile: !!pendingFile, currentTest: !!currentTest });
-      return;
-    }
-
-    setShowStudentDialog(false);
-    
-    try {
-      // Create or get student in Supabase
-      let student = await supabaseService.getStudentById(studentId);
-      if (!student) {
-        student = await supabaseService.createStudent({
-          student_id: studentId,
-          name: studentName
-        });
-        console.log('Student created in Supabase:', student);
-      } else {
-        console.log('Student found in Supabase:', student);
-      }
-    } catch (error) {
-      console.error('Error handling student:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save student information",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    // Create new upload with student info
-    const newUpload: ProcessingItem = {
-      id: Date.now().toString(),
-      filename: pendingFile.name,
-      size: pendingFile.size,
-      status: 'processing',
-      progress: 0,
-      startTime: Date.now(),
-      evaluationMode: evaluationMode
     };
 
-    setUploads(prev => [...prev, newUpload]);
+    initializeApp();
+  }, []);
+
+  const handleFileUpload = useCallback(async (files: FileList, mode: EvaluationMode) => {
+    console.log('App: handleFileUpload called with files:', files.length, 'mode:', mode);
+    
+    const newUploads: ProcessingItem[] = Array.from(files).map((file, index) => ({
+      id: `upload-${Date.now()}-${index}`,
+      filename: file.name,
+      status: 'processing',
+      progress: 0,
+      uploadedAt: new Date().toISOString(),
+      mode,
+    }));
+
+    setUploads(prev => [...prev, ...newUploads]);
 
     try {
-      console.log('Starting OMR processing...', { evaluationMode, fileName: pendingFile.name });
-      
-      // Update progress to show processing has started
-      setUploads(prev => prev.map(upload => 
-        upload.id === newUpload.id 
-          ? { ...upload, progress: 10, status: 'processing' }
-          : upload
-      ));
-      
-      // Set evaluation mode
-      omrProcessor.setEvaluationMode(evaluationMode);
-      
-      // Update progress to show processing is in progress
-      setUploads(prev => prev.map(upload => 
-        upload.id === newUpload.id 
-          ? { ...upload, progress: 50, status: 'processing' }
-          : upload
-      ));
-      
-      // Process with student info and answer key
-      const testData = currentTest ? {
-        subjects: currentTest.subjects || [],
-        answerKey: (currentTest.subjects || []).flatMap(subject => subject.answer_key)
-      } : undefined;
-      
-      const result = await omrProcessor.processOMRSheet(pendingFile, testData);
-      
-      console.log('OMR processing result:', result);
-      
-      if (!result) {
-        throw new Error('No result returned from OMR processor');
-      }
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const uploadId = newUploads[i].id;
 
-      if (result.success && result.data) {
-        // Update upload status
+        // Update progress
         setUploads(prev => prev.map(upload => 
-          upload.id === newUpload.id 
-            ? { ...upload, status: 'completed', progress: 100, endTime: Date.now() }
+          upload.id === uploadId 
+            ? { ...upload, progress: 25 }
             : upload
         ));
 
-        try {
-          // Update progress to show database saving
-          setUploads(prev => prev.map(upload => 
-            upload.id === newUpload.id 
-              ? { ...upload, progress: 80, status: 'processing' }
-              : upload
-          ));
-          
-          // Save OMR sheet to Supabase
-          const omrSheet = await supabaseService.createOMRSheet({
-            test_id: currentTest.id || 'default',
-            student_id: studentId,
-            filename: pendingFile.name,
-            file_path: `uploads/${Date.now()}-${pendingFile.name}`,
-            file_size: pendingFile.size,
-            status: 'completed',
-            evaluation_mode: evaluationMode
-          });
-          console.log('OMR sheet saved to Supabase:', omrSheet);
+        // Process the file
+        const result = await omrProcessor.processOMRSheet(file, mode, currentTest);
+        
+        // Update progress
+        setUploads(prev => prev.map(upload => 
+          upload.id === uploadId 
+            ? { ...upload, progress: 75 }
+            : upload
+        ));
 
-          // Save evaluation to Supabase
-          const evaluation = await supabaseService.createEvaluation({
-            sheet_id: omrSheet.id || '',
-            test_id: currentTest.id || 'default',
-            student_id: studentId,
-            per_question: result.data.answers,
-            per_subject_scores: result.data.scores,
-            total_score: Object.values(result.data.scores).reduce((sum: number, score: any) => sum + (typeof score === 'number' ? score : 0), 0),
-            confidence_score: result.data.confidence,
-            processing_time: result.data.processingTime,
-            flags: {
-              ambiguous_questions: result.data.flaggedQuestions,
-              low_confidence: result.data.flaggedQuestions
-            }
-          });
-          console.log('Evaluation saved to Supabase:', evaluation);
+        // Add to results
+        const newResult: OMRResult = {
+          id: `result-${Date.now()}-${i}`,
+          filename: file.name,
+          score: result.score,
+          totalQuestions: result.totalQuestions,
+          correctAnswers: result.correctAnswers,
+          incorrectAnswers: result.incorrectAnswers,
+          unanswered: result.unanswered,
+          percentage: result.percentage,
+          answers: result.answers,
+          processingTime: result.processingTime,
+          confidence: result.confidence,
+          flagged: result.flagged,
+          mode,
+          processedAt: new Date().toISOString(),
+        };
 
-          // Add to results
-          const omrResult: OMRResult = {
-            upload_id: newUpload.id,
-            student_id: studentId,
-            filename: pendingFile.name,
-            answers: result.data.answers,
-            scores: result.data.scores,
-            flagged_questions: result.data.flaggedQuestions,
-            confidence_score: result.data.confidence,
-            processing_time: result.data.processingTime,
-            evaluation_mode: evaluationMode,
-            created_at: new Date().toISOString()
-          };
-          setResults(prev => [...prev, omrResult]);
-          setActiveTab('results');
-          
-          toast({ 
-            title: "Processing Complete", 
-            description: `OMR sheet processed for ${studentName} (${studentId})` 
-          });
-        } catch (dbError) {
-          console.error('Error saving to database:', dbError);
-          toast({
-            title: "Warning",
-            description: "Processing completed but failed to save to database",
-            variant: "destructive"
-          });
-        }
-      } else {
-        throw new Error(result.error || 'Processing failed');
+        setResults(prev => [...prev, newResult]);
+
+        // Update upload status
+        setUploads(prev => prev.map(upload => 
+          upload.id === uploadId 
+            ? { ...upload, status: 'completed', progress: 100 }
+            : upload
+        ));
+
+        // Save to localStorage
+        const updatedResults = [...results, newResult];
+        localStorage.setItem('omrResults', JSON.stringify(updatedResults));
       }
-    } catch (error) {
-      console.error('Processing failed:', error);
-      console.error('Error details:', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-        fileName: pendingFile.name
+
+      // Save uploads to localStorage
+      const updatedUploads = [...uploads, ...newUploads];
+      localStorage.setItem('omrUploads', JSON.stringify(updatedUploads));
+
+      toast({
+        title: "Processing Complete",
+        description: `Successfully processed ${files.length} file(s)`,
       });
+
+    } catch (error) {
+      console.error('File processing failed:', error);
       
-      setUploads(prev => prev.map(upload => 
-        upload.id === newUpload.id 
-          ? { ...upload, status: 'failed', progress: 0, endTime: Date.now() }
-          : upload
-      ));
-      toast({ 
-        title: "Processing Failed", 
-        description: `Failed to process ${pendingFile.name}: ${error instanceof Error ? error.message : 'Unknown error'}`, 
-        variant: "destructive" 
+      // Update failed uploads
+      newUploads.forEach(upload => {
+        setUploads(prev => prev.map(u => 
+          u.id === upload.id 
+            ? { ...u, status: 'failed', progress: 0 }
+            : u
+        ));
+      });
+
+      toast({
+        title: "Processing Failed",
+        description: "Failed to process one or more files",
+        variant: "destructive",
       });
     }
+  }, [currentTest, results, uploads]);
 
-    setPendingFile(null);
-  }, [pendingFile, currentTest, evaluationMode]);
-
-  // Processing Queue Handlers
-  const handleViewResult = useCallback((upload: ProcessingItem) => {
-    // Find the result for this upload
-    const result = results.find(r => r.upload_id === upload.id);
-    if (result) {
-      setSelectedResult(result);
-      setActiveTab('results');
-    }
-  }, [results]);
-
-  const handleRetry = useCallback(async (upload: ProcessingItem) => {
-    // Reset upload status and retry processing
-    setUploads(prev => prev.map(u => 
-      u.id === upload.id 
-        ? { ...u, status: 'processing', progress: 0, startTime: Date.now() }
-        : u
-    ));
-    
-    // Here you would retry the actual processing
-    toast({ title: "Retrying", description: `Retrying processing for ${upload.filename}` });
-  }, []);
-
-  const handleCancel = useCallback((upload: ProcessingItem) => {
-    // Cancel processing
-    setUploads(prev => prev.map(u => 
-      u.id === upload.id 
-        ? { ...u, status: 'failed', progress: 0, endTime: Date.now() }
-        : u
-    ));
-    toast({ title: "Cancelled", description: `Processing cancelled for ${upload.filename}` });
-  }, []);
-
-  const handleRemove = useCallback((upload: ProcessingItem) => {
-    // Remove from uploads list
-    setUploads(prev => prev.filter(u => u.id !== upload.id));
-    toast({ title: "Removed", description: `Removed ${upload.filename} from queue` });
-  }, []);
-
-  // Question Correction Handler
-  const handleQuestionCorrection = useCallback(async (qIdx: number, newChoice: string) => {
-    if (!selectedResult) return;
-
-    const corrections = [{
-      question_id: qIdx,
-      old_choice: selectedResult.answers.find(q => q.questionNumber === qIdx)?.selectedAnswer,
-      new_choice: newChoice,
-      timestamp: new Date().toISOString(),
-      user_id: 'demo_user'
-    }];
-
-    try {
-      const updatedResult = await mockAPI.correctResult(selectedResult.upload_id, corrections);
-      setSelectedResult(updatedResult);
-      toast({ title: "Correction saved", description: `Question ${qIdx} updated to ${newChoice}` });
-    } catch (error) {
-      toast({ title: "Save failed", description: "Failed to save correction", variant: "destructive" });
-    }
-  }, [selectedResult]);
-
-
-  const handleReviewResult = (result: OMRResult) => {
+  const handleViewResult = useCallback((result: OMRResult) => {
     setSelectedResult(result);
-    setActiveTab('results');
-  };
+  }, []);
 
+  const handleReviewResult = useCallback((result: OMRResult) => {
+    setSelectedResult(result);
+  }, []);
+
+  const handleRetry = useCallback((uploadId: string) => {
+    setUploads(prev => prev.map(upload => 
+      upload.id === uploadId 
+        ? { ...upload, status: 'processing', progress: 0 }
+        : upload
+    ));
+  }, []);
+
+  const handleCancel = useCallback((uploadId: string) => {
+    setUploads(prev => prev.filter(upload => upload.id !== uploadId));
+  }, []);
+
+  const handleRemove = useCallback((uploadId: string) => {
+    setUploads(prev => prev.filter(upload => upload.id !== uploadId));
+  }, []);
+
+  const handleStudentIdentified = useCallback((studentInfo: { name: string; rollNumber: string }) => {
+    console.log('Student identified:', studentInfo);
+    setShowStudentDialog(false);
+    setPendingFile(null);
+    
+    toast({
+      title: "Student Identified",
+      description: `Processing sheet for ${studentInfo.name} (${studentInfo.rollNumber})`,
+    });
+  }, []);
 
   const renderContent = () => {
     switch (activeTab) {
       case 'create-test':
         return (
           <CreateTestPage 
-            onTestCreated={handleTestCreated}
-            onStartEvaluating={handleStartEvaluating}
+            onTestCreated={setCurrentTest}
+            currentTest={currentTest}
           />
         );
       case 'upload':
         return (
           <UploadPage 
-            onFileUpload={handleFileUpload} 
-            uploads={uploads} 
+            onFileUpload={handleFileUpload}
+            uploads={uploads}
             currentTest={currentTest}
           />
         );
@@ -519,95 +249,112 @@ const App: React.FC = () => {
     }
   };
 
-  return (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-        <div className="min-h-screen bg-background">
-                {/* Settings Panel */}
-                <Dialog open={showSettings} onOpenChange={setShowSettings}>
-                  <DialogContent className="max-w-md">
-                    <DialogHeader>
-                      <DialogTitle>System Configuration</DialogTitle>
-                      <DialogDescription>Adjust OMR processing thresholds and settings</DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div>
-                        <Label htmlFor="th-low">Low Confidence Threshold</Label>
-                        <Input 
-                          id="th-low"
-                          type="number" 
-                          step="0.1" 
-                          min="0" 
-                          max="1"
-                          value={settings.TH_LOW}
-                          onChange={(e) => setSettings(prev => ({ ...prev, TH_LOW: parseFloat(e.target.value) }))}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="th-high">High Confidence Threshold</Label>
-                        <Input 
-                          id="th-high"
-                          type="number" 
-                          step="0.1" 
-                          min="0" 
-                          max="1"
-                          value={settings.TH_HIGH}
-                          onChange={(e) => setSettings(prev => ({ ...prev, TH_HIGH: parseFloat(e.target.value) }))}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="flag-rate">Flag Rate Target</Label>
-                        <Input 
-                          id="flag-rate"
-                          type="number" 
-                          step="0.01" 
-                          min="0" 
-                          max="1"
-                          value={settings.flag_rate_target}
-                          onChange={(e) => setSettings(prev => ({ ...prev, flag_rate_target: parseFloat(e.target.value) }))}
-                        />
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-
-                {/* Main Interface */}
-                <div className="flex h-screen">
-                  <Sidebar
-                    activeTab={activeTab}
-                    onTabChange={setActiveTab}
-                    onShowSettings={() => setShowSettings(true)}
-                  />
-
-                  {/* Main Content */}
-                  <div className="flex-1 overflow-auto">
-                    <div className="p-6">
-                      {renderContent()}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Student Identification Dialog */}
-              <StudentIdentificationDialog
-                isOpen={showStudentDialog}
-                onClose={() => setShowStudentDialog(false)}
-                onConfirm={handleStudentIdentified}
-                filename={pendingFile?.name || ''}
+  const MainApp = () => (
+    <div className="min-h-screen bg-background">
+      {/* Settings Panel */}
+      <Dialog open={showSettings} onOpenChange={setShowSettings}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>System Configuration</DialogTitle>
+            <DialogDescription>Adjust OMR processing thresholds and settings</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="th-low">Low Confidence Threshold</Label>
+              <Input 
+                id="th-low"
+                type="number" 
+                step="0.1" 
+                min="0" 
+                max="1"
+                value={settings.TH_LOW}
+                onChange={(e) => setSettings(prev => ({ ...prev, TH_LOW: parseFloat(e.target.value) }))}
               />
+            </div>
+            <div>
+              <Label htmlFor="th-high">High Confidence Threshold</Label>
+              <Input 
+                id="th-high"
+                type="number" 
+                step="0.1" 
+                min="0" 
+                max="1"
+                value={settings.TH_HIGH}
+                onChange={(e) => setSettings(prev => ({ ...prev, TH_HIGH: parseFloat(e.target.value) }))}
+              />
+            </div>
+            <div>
+              <Label htmlFor="flag-rate">Flag Rate Target</Label>
+              <Input 
+                id="flag-rate"
+                type="number" 
+                step="0.01" 
+                min="0" 
+                max="1"
+                value={settings.flag_rate_target}
+                onChange={(e) => setSettings(prev => ({ ...prev, flag_rate_target: parseFloat(e.target.value) }))}
+              />
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
-              {/* Custom Footer */}
-              <footer className="fixed bottom-0 left-0 right-0 bg-background border-t p-2 text-center text-sm text-muted-foreground z-50">
-                <div className="flex items-center justify-center gap-2">
-                  <Target className="h-4 w-4" />
-                  <span>OMR Vision System - Advanced OMR Evaluation Platform</span>
-                </div>
-              </footer>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+      {/* Main Interface */}
+      <div className="flex h-screen">
+        <Sidebar
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          onShowSettings={() => setShowSettings(true)}
+        />
+
+        {/* Main Content */}
+        <div className="flex-1 overflow-auto">
+          <div className="p-6">
+            {renderContent()}
+          </div>
+        </div>
+      </div>
+
+      {/* Student Identification Dialog */}
+      <StudentIdentificationDialog
+        isOpen={showStudentDialog}
+        onClose={() => setShowStudentDialog(false)}
+        onConfirm={handleStudentIdentified}
+        filename={pendingFile?.name || ''}
+      />
+
+      {/* Custom Footer */}
+      <footer className="fixed bottom-0 left-0 right-0 bg-background border-t p-2 text-center text-sm text-muted-foreground z-50">
+        <div className="flex items-center justify-center gap-2">
+          <Target className="h-4 w-4" />
+          <span>OMR Vision System - Advanced OMR Evaluation Platform</span>
+        </div>
+      </footer>
+    </div>
+  );
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <Router>
+          <AuthProvider>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/*" element={
+                <ProtectedRoute>
+                  <MainApp />
+                </ProtectedRoute>
+              } />
+            </Routes>
+          </AuthProvider>
+        </Router>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
 };
 
 export default App;
