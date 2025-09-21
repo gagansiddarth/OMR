@@ -1,0 +1,12 @@
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "uvicorn main:app --host 0.0.0.0 --port $PORT"
+healthcheckPath = "/health"
+healthcheckTimeout = 100
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+
+[build.nixpacks]
+nixpkgs = ["python310", "opencv", "tesseract", "libgl", "libglib", "libsm", "libxext", "libxrender", "libgomp", "libgthread-2.0-0"]
