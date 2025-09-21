@@ -33,10 +33,12 @@ import { BookOpen, Target } from 'lucide-react';
 const queryClient = new QueryClient();
 
 const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<TabId>('upload');
+  const [activeTab, setActiveTab] = useState<TabId>('create-test');
   const [uploads, setUploads] = useState<ProcessingItem[]>([]);
   const [results, setResults] = useState<OMRResult[]>([]);
   const [selectedResult, setSelectedResult] = useState<OMRResult | null>(null);
+  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
+  const [showSettings, setShowSettings] = useState(false);
   const [currentTest, setCurrentTest] = useState<TestDetails | null>(null);
   const [showStudentDialog, setShowStudentDialog] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
@@ -523,12 +525,60 @@ const App: React.FC = () => {
       <Toaster />
       <Sonner />
         <div className="min-h-screen bg-background">
+                {/* Settings Panel */}
+                <Dialog open={showSettings} onOpenChange={setShowSettings}>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>System Configuration</DialogTitle>
+                      <DialogDescription>Adjust OMR processing thresholds and settings</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="th-low">Low Confidence Threshold</Label>
+                        <Input 
+                          id="th-low"
+                          type="number" 
+                          step="0.1" 
+                          min="0" 
+                          max="1"
+                          value={settings.TH_LOW}
+                          onChange={(e) => setSettings(prev => ({ ...prev, TH_LOW: parseFloat(e.target.value) }))}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="th-high">High Confidence Threshold</Label>
+                        <Input 
+                          id="th-high"
+                          type="number" 
+                          step="0.1" 
+                          min="0" 
+                          max="1"
+                          value={settings.TH_HIGH}
+                          onChange={(e) => setSettings(prev => ({ ...prev, TH_HIGH: parseFloat(e.target.value) }))}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="flag-rate">Flag Rate Target</Label>
+                        <Input 
+                          id="flag-rate"
+                          type="number" 
+                          step="0.01" 
+                          min="0" 
+                          max="1"
+                          value={settings.flag_rate_target}
+                          onChange={(e) => setSettings(prev => ({ ...prev, flag_rate_target: parseFloat(e.target.value) }))}
+                        />
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
 
                 {/* Main Interface */}
                 <div className="flex h-screen">
                   <Sidebar
                     activeTab={activeTab}
                     onTabChange={setActiveTab}
+                    onShowSettings={() => setShowSettings(true)}
                   />
 
                   {/* Main Content */}

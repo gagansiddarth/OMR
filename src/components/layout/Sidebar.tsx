@@ -11,6 +11,7 @@ import { TabId } from '@/types';
 interface SidebarProps {
   activeTab: TabId;
   onTabChange: (tab: TabId) => void;
+  onShowSettings: () => void;
 }
 
 const iconMap = {
@@ -23,16 +24,25 @@ const iconMap = {
 
 const Sidebar: React.FC<SidebarProps> = ({ 
   activeTab, 
-  onTabChange
+  onTabChange,
+  onShowSettings
 }) => {
   return (
     <div className="w-64 bg-card border-r">
       <div className="p-6">
-        <div className="flex items-center gap-2 mb-6">
-          <Target className="h-6 w-6 text-primary" />
-          <h1 className="text-xl font-bold">OMR System</h1>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2">
+            <Target className="h-6 w-6 text-primary" />
+            <h1 className="text-xl font-bold">OMR System</h1>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={onShowSettings}
+          >
+            <Settings className="h-4 w-4" />
+          </Button>
         </div>
-        
 
         <nav className="space-y-2">
           {NAVIGATION_ITEMS.map((item) => {
