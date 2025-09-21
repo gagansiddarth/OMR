@@ -1,5 +1,5 @@
 [phases.setup]
-nixPkgs = ["python310", "opencv", "tesseract", "libgl", "libglib", "libsm", "libxext", "libxrender", "libgomp", "libgthread-2.0-0"]
+nixPkgs = ["python310", "opencv", "tesseract"]
 
 [phases.install]
 cmds = ["pip install -r requirements.txt"]
